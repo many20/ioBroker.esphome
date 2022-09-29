@@ -21,7 +21,6 @@
     "@iobroker/adapter-core": "^2.5.1",
     "@sentry/node": "^5.30.0",
     "esphome-native-api": "^1.0.9",
-    "nopy": "^0.2.7",
     "tree-kill": "^1.2.2"
   },
   "devDependencies": {
@@ -45,7 +44,7 @@
     "proxyquire": "^2.1.3",
     "sinon": "^9.2.4",
     "sinon-chai": "^3.7.0",
-    "typescript": "^4.3.5"
+    "typescript": "~4.3.5"
   },
   "main": "main.js",
   "scripts": {
@@ -56,26 +55,7 @@
     "test:integration": "mocha test/integration --exit",
     "test": "npm run test:js && npm run test:package",
     "check": "tsc --noEmit -p tsconfig.check.json",
-    "lint": "eslint",
-    "install": "npip install",
-    "nopy": "nopy",
-    "npip": "npip",
-    "dashboard": "npm run -s nopy ./python_modules/bin/esphome config/ dashboard"
-  },
-  "python": {
-    "execPath": [
-      "python3.8",
-      "python3.7",
-      "python3",
-      "python"
-    ],
-    "path": [
-      "."
-    ],
-    "dependencies": {
-      "esphome": ">=2021.8",
-      "tornado": ">=3.2"
-    }
+    "lint": "eslint"
   },
   "bugs": {
     "url": "https://github.com/DrozmotiX/ioBroker.esphome/issues"
