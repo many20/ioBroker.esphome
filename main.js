@@ -7,18 +7,17 @@
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 const utils = require('@iobroker/adapter-core');
-const { Client } = require('esphome-native-api');
-const { Discovery } = require('esphome-native-api');
-const kill = require('tree-kill');
+const { Client, Discovery } = require('esphome-native-api');
+// const kill = require('tree-kill');
 let discovery;
 const stateAttr = require(__dirname + '/lib/stateAttr.js'); // Load attribute library
 const disableSentry = false; // Ensure to set to true during development!
 const warnMessages = {}; // Store warn messages to avoid multiple sending to sentry
 const client = {};
-let reconnectTimer, reconnectInterval, apiPass, autodiscovery, dashboardProcess, createConfigStates;
+let reconnectInterval, apiPass, autodiscovery, createConfigStates; //dashboardProcess
 
 // const exec = require('child_process').exec;
-const { fork, spawn } = require('child_process');
+// const { spawn } = require('child_process');
 
 class Esphome extends utils.Adapter {
 
@@ -36,8 +35,8 @@ class Esphome extends utils.Adapter {
 		this.on('message', this.onMessage.bind(this));
 		this.on('unload', this.onUnload.bind(this));
 
-		this.deviceInfo  = {}; // Memory array of initiated objects
-		this.deviceStateRelation  = {}; // Memory array of initiated device by Device Identifier (name) and IP
+		this.deviceInfo = {}; // Memory array of initiated objects
+		this.deviceStateRelation = {}; // Memory array of initiated device by Device Identifier (name) and IP
 		this.createdStatesDetails = {}; // Array to store information of created states
 		this.messageResponse = {}; // Array to store messages from admin and provide proper message to add/remove devices
 	}
@@ -46,10 +45,10 @@ class Esphome extends utils.Adapter {
 	 * Is called when databases are connected and adapter received configuration.
 	 */
 	async onReady() {
-		await this.setStateAsync('info.connection', {val: true, ack: true});
+		await this.setStateAsync('info.connection', { val: true, ack: true });
 		try {
 			apiPass = this.config.apiPass;
-			autodiscovery =  this.config.autodiscovery;
+			autodiscovery = this.config.autodiscovery;
 			reconnectInterval = this.config.reconnectInterval * 1000;
 			createConfigStates = this.config.configStates;
 
@@ -57,77 +56,77 @@ class Esphome extends utils.Adapter {
 			await this.tryKnownDevices();
 
 			// Start MDNS discovery when enabled
-			if (autodiscovery){
+			if (autodiscovery) {
 				this.deviceDiscovery(); // Start MDNS autodiscovery
 			} else {
 				this.log.warn(`Auto Discovery disabled, new devices (or IP changes) will NOT be detected automatically!`);
 			}
 
-			if (this.config.ESPHomeDashboardEnabled){
-				this.log.info(`Native Integration of ESPHome Dashboard enabled `);
-				await this.espHomeDashboard();
-			} else {
-				this.log.info(`Native Integration of ESPHome Dashboard disabled `);
-			}
+			// if (this.config.ESPHomeDashboardEnabled) {
+			// 	this.log.info(`Native Integration of ESPHome Dashboard enabled `);
+			// 	await this.espHomeDashboard();
+			// } else {
+			this.log.info(`Native Integration of ESPHome Dashboard disabled `);
+			// }
 
 		} catch (e) {
 			this.log.error(`Connection issue ${e}`);
 		}
 	}
 
-	async espHomeDashboard() {
+	// async espHomeDashboard() {
 
-		try {
+	// 	try {
 
-			// Define directory to store configuration files
-			const dataDir = utils.getAbsoluteDefaultDataDir();
-			dashboardProcess = spawn(`npm`, [`run`, `-s`, `nopy`, `/opt/iobroker/node_modules/iobroker.esphome/python_modules/bin/esphome`, `dashboard`, `${dataDir}esphome.${this.instance}`], {
-				cwd: '/opt/iobroker/node_modules/iobroker.esphome'
-			});
+	// 		// Define directory to store configuration files
+	// 		const dataDir = utils.getAbsoluteDefaultDataDir();
+	// 		dashboardProcess = spawn(`npm`, [`run`, `-s`, `nopy`, `/opt/iobroker/node_modules/iobroker.esphome/python_modules/bin/esphome`, `dashboard`, `${dataDir}esphome.${this.instance}`], {
+	// 			cwd: '/opt/iobroker/node_modules/iobroker.esphome'
+	// 		});
 
-			this.log.debug(`espHomeDashboard_Process ${JSON.stringify(dashboardProcess)}`);
+	// 		this.log.debug(`espHomeDashboard_Process ${JSON.stringify(dashboardProcess)}`);
 
-			dashboardProcess.stdout.on('data', (data) => {
-				this.log.info(`[dashboardProcess - Data] ${data}`);
-			});
+	// 		dashboardProcess.stdout.on('data', (data) => {
+	// 			this.log.info(`[dashboardProcess - Data] ${data}`);
+	// 		});
 
-			dashboardProcess.stderr.on('data', (data) => {
-				// this.log.warn(`[dashboardProcess ERROR] ${data}`);
-				if (data.includes('INFO')){
-					if (data.includes('Starting')){
-						this.log.info(`[ESPHome - Console] ${data}`);
-					} else {
-						this.log.debug(`[ESPHome - Console] ${data}`);
-					}
-				} else  {
-					this.log.error(`[dashboardProcess ERROR] ${data}`);
-				}
-			});
+	// 		dashboardProcess.stderr.on('data', (data) => {
+	// 			// this.log.warn(`[dashboardProcess ERROR] ${data}`);
+	// 			if (data.includes('INFO')) {
+	// 				if (data.includes('Starting')) {
+	// 					this.log.info(`[ESPHome - Console] ${data}`);
+	// 				} else {
+	// 					this.log.debug(`[ESPHome - Console] ${data}`);
+	// 				}
+	// 			} else {
+	// 				this.log.error(`[dashboardProcess ERROR] ${data}`);
+	// 			}
+	// 		});
 
-			dashboardProcess.on('message', (code, signal) => {
-				this.log.info(`[dashboardProcess MESSAGE] Exit code is: ${code} | ${signal}`);
-			});
+	// 		dashboardProcess.on('message', (code, signal) => {
+	// 			this.log.info(`[dashboardProcess MESSAGE] Exit code is: ${code} | ${signal}`);
+	// 		});
 
-			dashboardProcess.on('exit', (code, signal) => {
-				this.log.warn(`ESPHome Dashboard deactivated`);
-			});
+	// 		dashboardProcess.on('exit', (code, signal) => {
+	// 			this.log.warn(`ESPHome Dashboard deactivated`);
+	// 		});
 
-			dashboardProcess.on('error', (data) => {
-				if (data.message.includes('INFO')){
-					this.log.info(`[dashboardProcess Info] ${data}`);
-				} else if (data.message.includes('ERROR')) {
-					this.log.error(`[dashboardProcess Warn] ${data}`);
-				} else {
-					this.log.error(`[dashboardProcess Error] ${data}`);
-				}
-			});
+	// 		dashboardProcess.on('error', (data) => {
+	// 			if (data.message.includes('INFO')) {
+	// 				this.log.info(`[dashboardProcess Info] ${data}`);
+	// 			} else if (data.message.includes('ERROR')) {
+	// 				this.log.error(`[dashboardProcess Warn] ${data}`);
+	// 			} else {
+	// 				this.log.error(`[dashboardProcess Error] ${data}`);
+	// 			}
+	// 		});
 
-			// dashboardProcess.kill();
+	// 		// dashboardProcess.kill();
 
-		} catch (e) {
-			this.log.error(`[espHomeDashboard] ${e}`);
-		}
-	}
+	// 	} catch (e) {
+	// 		this.log.error(`[espHomeDashboard] ${e}`);
+	// 	}
+	// }
 
 	// Try to contact to contact and read data of already known devices
 	async tryKnownDevices() {
@@ -149,7 +148,7 @@ class Esphome extends utils.Adapter {
 	}
 
 	// MDNS discovery handler for ESPHome devices
-	deviceDiscovery(){
+	deviceDiscovery() {
 		try {
 
 			this.log.info(`Auto Discovery startet, new devices (or IP changes) will be detected automatically`);
@@ -158,14 +157,14 @@ class Esphome extends utils.Adapter {
 			discovery.on('info', async (message) => {
 				try {
 					this.log.debug(`Discovery message ${JSON.stringify(message)}`);
-					if (this.deviceInfo[message.address] == null){
+					if (this.deviceInfo[message.address] == null) {
 						this.log.info(`[AutoDiscovery] New ESPHome device found at IP ${message.address}`);
 						// Store new Device information to device array in memory
 						this.deviceInfo[message.address] = {
 							ip: message.address,
 							passWord: apiPass
 						};
-						this.connectDevices(`${message.address}`,`${apiPass}`);
+						this.connectDevices(`${message.address}`, `${apiPass}`);
 					}
 				} catch (e) {
 					this.log.error(`[deviceDiscovery handler] ${e}`);
@@ -178,7 +177,7 @@ class Esphome extends utils.Adapter {
 	}
 
 	// Handle Socket connections
-	connectDevices(host, pass){
+	connectDevices(host, pass) {
 
 		try {
 			// const host = espDevices[device].ip;
@@ -186,8 +185,8 @@ class Esphome extends utils.Adapter {
 			// Prepare connection attributes
 			client[host] = new Client({
 				host: host,
-				password : pass,
-				clientInfo : `${this.host}`,
+				password: pass,
+				clientInfo: `${this.host}`,
 				clearSession: true,
 				initializeDeviceInfo: true,
 				initializeListEntities: true,
@@ -214,7 +213,7 @@ class Esphome extends utils.Adapter {
 			client[host].on('disconnected', () => {
 				try {
 					if (this.deviceInfo[host].deviceName != null) {
-						this.setState(`${this.deviceInfo[host].deviceName}.info._online`, {val: false, ack: true});
+						this.setState(`${this.deviceInfo[host].deviceName}.info._online`, { val: false, ack: true });
 						this.log.warn(`ESPHome  client  ${this.deviceInfo[host].deviceInfo.name} disconnected`);
 					} else {
 						this.log.warn(`ESPHome  client  ${host} disconnected`);
@@ -259,7 +258,7 @@ class Esphome extends utils.Adapter {
 					};
 
 					// Store MAC & IP relation
-					this.deviceStateRelation[deviceName] = {'ip' : host};
+					this.deviceStateRelation[deviceName] = { 'ip': host };
 
 					this.log.debug(`DeviceInfo ${this.deviceInfo[host].deviceInfo.name}: ${JSON.stringify(this.deviceInfo)}`);
 
@@ -302,13 +301,13 @@ class Esphome extends utils.Adapter {
 
 			// Initialise data for states
 			client[host].on('newEntity', async entity => {
-				this.log.debug(`EntityData: ${JSON.stringify(entity.config)	}`);
+				this.log.debug(`EntityData: ${JSON.stringify(entity.config)}`);
 				try {
 					// Store relevant information into memory object
 					this.deviceInfo[host][entity.id] = {
-						config : entity.config,
-						name : entity.name,
-						type : entity.type,
+						config: entity.config,
+						name: entity.name,
+						type: entity.type,
 						unit: entity.config.unitOfMeasurement !== undefined ? entity.config.unitOfMeasurement || '' : ''
 					};
 
@@ -338,12 +337,12 @@ class Esphome extends utils.Adapter {
 					});
 
 					//Check if config channel should be created
-					if (!createConfigStates){
+					if (!createConfigStates) {
 						// Delete folder structure if already present
 						try {
 							const obj = await this.getObjectAsync(`${this.deviceInfo[host].deviceName}.${entity.type}.${entity.id}.config`);
 							if (obj) {
-								await this.delObjectAsync(`${this.deviceInfo[host].deviceName}.${entity.type}.${entity.id}.config`, {recursive: true});
+								await this.delObjectAsync(`${this.deviceInfo[host].deviceName}.${entity.type}.${entity.id}.config`, { recursive: true });
 							}
 						} catch (error) {
 							// do nothing
@@ -376,7 +375,7 @@ class Esphome extends utils.Adapter {
 							// Ensure proper initialisation of the state
 							switch (this.deviceInfo[host][entity.id].type) {
 								case 'BinarySensor':
-									await this.handleRegularState(`${host}`, entity, state, false );
+									await this.handleRegularState(`${host}`, entity, state, false);
 									break;
 
 								case 'Climate':
@@ -391,28 +390,28 @@ class Esphome extends utils.Adapter {
 
 
 								case 'Fan':
-									await this.handleRegularState(`${host}`, entity, state, false );
+									await this.handleRegularState(`${host}`, entity, state, false);
 									break;
 
 								case 'Light':
-									await this.handleStateArrays(`${host}`, entity, state, false );
+									await this.handleStateArrays(`${host}`, entity, state);
 									break;
 
 								case 'Sensor':
-									await this.handleRegularState(`${host}`, entity, state, false );
+									await this.handleRegularState(`${host}`, entity, state, false);
 									break;
 
 								case 'TextSensor':
-									await this.handleRegularState(`${host}`, entity, state, true );
+									await this.handleRegularState(`${host}`, entity, state, true);
 									break;
 
 								case 'Switch':
-									await this.handleRegularState(`${host}`, entity, state, true );
+									await this.handleRegularState(`${host}`, entity, state, true);
 									break;
 
 								default:
 
-									if (!warnMessages[this.deviceInfo[host][entity.id].type]){
+									if (!warnMessages[this.deviceInfo[host][entity.id].type]) {
 										this.log.warn(`DeviceType ${this.deviceInfo[host][entity.id].type} not yet supported`);
 										this.log.warn(`Please submit git issue with all information from next line`);
 										this.log.warn(`DeviceType ${this.deviceInfo[host][entity.id].type} | State-Keys ${JSON.stringify(state)} | [entityStateConfig] ${JSON.stringify(this.deviceInfo[host][entity.id])}`);
@@ -451,22 +450,22 @@ class Esphome extends utils.Adapter {
 				try {
 					let optimisedError = error.message;
 					// Optimise error messages
-					if (error.message.includes('EHOSTUNREACH')){
+					if (error.message.includes('EHOSTUNREACH')) {
 						optimisedError = `Client ${this.deviceInfo[host].ip} not reachable !`;
 						if (!warnMessages[host].connectError) {
 							this.log.error(optimisedError);
 							warnMessages[host].connectError = true;
 						}
-					} else if (error.message.includes('Invalid password')){
+					} else if (error.message.includes('Invalid password')) {
 						optimisedError = `Client ${host} incorrect password !`;
 						this.log.error(optimisedError);
-					} else if (error.message.includes('ECONNRESET')){
+					} else if (error.message.includes('ECONNRESET')) {
 						optimisedError = `Client ${this.deviceInfo[host].ip} Connection Lost, will reconnect automatically when device is available!`;
 						this.log.warn(optimisedError);
-					} else if (error.message.includes('timeout')){
+					} else if (error.message.includes('timeout')) {
 						optimisedError = `Client ${host} Timeout, connection Lost, will reconnect automatically when device is available!`;
 						this.log.warn(optimisedError);
-					} else if (error.message.includes('write after end')){
+					} else if (error.message.includes('write after end')) {
 						// Ignore error
 					} else {
 						this.log.error(`ESPHome client ${host} ${error}`);
@@ -484,7 +483,7 @@ class Esphome extends utils.Adapter {
 						this.messageResponse[host] = null;
 					}
 
-				}  catch (e) {
+				} catch (e) {
 					this.log.error(`ESPHome error handling issue ${host} ${e}`);
 				}
 			});
@@ -495,14 +494,14 @@ class Esphome extends utils.Adapter {
 				this.log.debug(`trying to connect to ${host}`);
 				// Reserve memory for warn messages
 				warnMessages[host] = {
-					connectError : false
+					connectError: false
 				};
 				client[host].connect();
 			} catch (e) {
 				this.log.error(`Client ${host} connect error ${e}`);
 			}
 
-		}  catch (e) {
+		} catch (e) {
 			this.log.error(`ESP device error for ${host}`);
 		}
 
@@ -515,17 +514,17 @@ class Esphome extends utils.Adapter {
 	 * @param {object} state State-Object
 	 * @param {boolean} writable Indicate if state should be writable
 	 */
-	async handleRegularState(host, entity, state, writable){
+	async handleRegularState(host, entity, state, writable) {
 		// Round value to digits as known by configuration
 		let stateVal = state.state;
 
 		if (this.deviceInfo[host][entity.id].config.accuracyDecimals != null) {
-			const rounding = `round(${this.deviceInfo[host][entity.id].config.accuracyDecimals })`;
+			const rounding = `round(${this.deviceInfo[host][entity.id].config.accuracyDecimals})`;
 			this.log.debug(`Value "${stateVal}" for name "${entity}" before function modify with method "round(${this.deviceInfo[host][entity.id].config.accuracyDecimals})"`);
 			stateVal = this.modify(rounding, stateVal);
 			this.log.debug(`Value "${stateVal}" for name "${entity}" after function modify with method "${rounding}"`);
 		}
-		await this.stateSetCreate( `${this.deviceInfo[host].deviceName}.${entity.type}.${entity.id}.state`, `State of ${entity.config.name}`, stateVal, this.deviceInfo[host][entity.id].unit, writable);
+		await this.stateSetCreate(`${this.deviceInfo[host].deviceName}.${entity.type}.${entity.id}.state`, `State of ${entity.config.name}`, stateVal, this.deviceInfo[host][entity.id].unit, writable);
 	}
 
 	async handleStateArrays(host, entity, state) {
@@ -534,23 +533,23 @@ class Esphome extends utils.Adapter {
 
 		for (const stateName in this.deviceInfo[host][entity.id].states) {
 			let unit = '';
-			let writable  = true;
+			let writable = true;
 			let writeValue = state[stateName];
 
 			// Define if state should be writable
 			switch (stateName) {
 				case 'currentTemperature':
 					unit = `°C`;
-					writable =  false;
+					writable = false;
 					this.deviceInfo[host][entity.id].states.currentTemperature = this.modify('round(2)', state[stateName]);
 					break;
 
 				case 'oscillating': // Sensor type = Fan, write not supported
-					writable =  false;
+					writable = false;
 					break;
 
 				case 'speed': // Sensor type = Fan, write not supported
-					writable =  false;
+					writable = false;
 					break;
 
 			}
@@ -585,11 +584,12 @@ class Esphome extends utils.Adapter {
 						transitionLength = await this.getStateAsync(`${this.deviceInfo[host].deviceName}.${entity.type}.${entity.id}.transitionLength`);
 
 						// Check if state contains value
-						if (transitionLength){
+						if (transitionLength) {
 							this.deviceInfo[host][entity.id].states.transitionLength = transitionLength.val;
 						} else { // Else just create it
 							await this.stateSetCreate(`${this.deviceInfo[host].deviceName}.${entity.type}.${entity.id}.transitionLength`, `${stateName} of ${entity.config.name}`, 0, `s`, writable);
-							this.deviceInfo[host][entity.id].states.transitionLength = 0;}
+							this.deviceInfo[host][entity.id].states.transitionLength = 0;
+						}
 
 					} catch (e) { // Else just create it
 						await this.stateSetCreate(`${this.deviceInfo[host].deviceName}.${entity.type}.${entity.id}.transitionLength`, `${stateName} of ${entity.config.name}`, 0, `s`, writable);
@@ -607,7 +607,7 @@ class Esphome extends utils.Adapter {
 		// Convert RGB to HEX an write to state
 		if (this.deviceInfo[host][entity.id].states.red != null &&
 			this.deviceInfo[host][entity.id].states.blue != null &&
-			this.deviceInfo[host][entity.id].states.green != null){
+			this.deviceInfo[host][entity.id].states.green != null) {
 			const hexValue = await this.rgbToHex(
 				Math.round((this.deviceInfo[host][entity.id].states.red * 100) * 2.55),
 				Math.round((this.deviceInfo[host][entity.id].states.green * 100) * 2.55),
@@ -858,16 +858,14 @@ class Esphome extends utils.Adapter {
 					this.log.debug(`[onUnload] ${JSON.stringify(e)}`);
 				}
 			}
-			if (reconnectTimer){
-				reconnectTimer = clearTimeout();
-			}
-			try {
-				if (dashboardProcess && dashboardProcess.pid){
-					kill(dashboardProcess.pid);
-				}
-			} catch (e) {
-				this.log.error(`[onUnload - dashboardProcess] ${JSON.stringify(e)}`);
-			}
+
+			// try {
+			// 	if (dashboardProcess && dashboardProcess.pid) {
+			// 		kill(dashboardProcess.pid);
+			// 	}
+			// } catch (e) {
+			// 	this.log.error(`[onUnload - dashboardProcess] ${JSON.stringify(e)}`);
+			// }
 
 			callback();
 		} catch (e) {
@@ -901,10 +899,8 @@ class Esphome extends utils.Adapter {
 				case 'addDevice':
 
 					// eslint-disable-next-line no-case-declarations,no-inner-declarations
-					function validateIPaddress(ipaddress)
-					{
-						if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ipaddress))
-						{
+					function validateIPaddress(ipaddress) {
+						if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ipaddress)) {
 							return (true);
 						}
 						return (false);
@@ -926,7 +922,7 @@ class Esphome extends utils.Adapter {
 						this.log.info(`Valid IP address received`);
 						this.messageResponse[obj.message['device-ip']] = obj;
 						const pass = this.decrypt(obj.message['device-pass']);
-						await this.connectDevices(obj.message['device-ip'],pass);
+						await this.connectDevices(obj.message['device-ip'], pass);
 					}
 					break;
 			}
@@ -982,7 +978,7 @@ class Esphome extends utils.Adapter {
 				// Handle Switch State
 				if (this.deviceInfo[deviceIP][device[4]].type === `Switch`
 					|| this.deviceInfo[deviceIP][device[4]].type === `Fan`) {
-					await client[deviceIP].connection.switchCommandService({key: device[4], state: state.val});
+					await client[deviceIP].connection.switchCommandService({ key: device[4], state: state.val });
 
 					// Handle Climate State
 				} else if (this.deviceInfo[deviceIP][device[4]].type === `Climate`) {
@@ -992,27 +988,27 @@ class Esphome extends utils.Adapter {
 					// Handle Cover Position
 				} else if (device[5] === `position`) {
 					// this.deviceInfo[deviceIP][device[4]].states[device[5]] = state.val;
-					await client[deviceIP].connection.climateCommandService({'key': device[4], 'position': state.val});
+					await client[deviceIP].connection.climateCommandService({ 'key': device[4], 'position': state.val });
 
 					// Handle Cover Tilt
 				} else if (device[5] === `tilt`) {
 					// this.deviceInfo[deviceIP][device[4]].states[device[5]] = state.val;
-					await client[deviceIP].connection.climateCommandService({'key': device[4], 'tilt': state.val});
+					await client[deviceIP].connection.climateCommandService({ 'key': device[4], 'tilt': state.val });
 
 					// Handle Cover Stop
 				} else if (device[5] === `stop`) {
 					// this.deviceInfo[deviceIP][device[4]].states[device[5]] = state.val;
-					await client[deviceIP].connection.climateCommandService({'key': device[4], 'stop': true});
+					await client[deviceIP].connection.climateCommandService({ 'key': device[4], 'stop': true });
 
 				} else if (this.deviceInfo[deviceIP][device[4]].type === `Light`) {
 					let writeValue = state.val;
 					// Add unit to temperature states
 					if (device[5] === `brightness`
-						|| device[5]  === `blue`
-						|| device[5]  === `green`
-						|| device[5]  === `red`
-						|| device[5]  === `white`
-						|| device[5]  === `colorTemperature`) {
+						|| device[5] === `blue`
+						|| device[5] === `green`
+						|| device[5] === `red`
+						|| device[5] === `white`
+						|| device[5] === `colorTemperature`) {
 
 						// Convert value to 255 range
 						writeValue = (writeValue / 100) / 2.55;
@@ -1026,21 +1022,21 @@ class Esphome extends utils.Adapter {
 						const rgbConversion = await this.hexToRgb(writeValue);
 						if (!rgbConversion) return;
 						this.deviceInfo[deviceIP][device[4]].states.red = (rgbConversion.red / 100) / 2.55;
-						this.deviceInfo[deviceIP][device[4]].states.blue = (rgbConversion.blue  / 100) / 2.55;
-						this.deviceInfo[deviceIP][device[4]].states.green = (rgbConversion.green  / 100) / 2.55;
+						this.deviceInfo[deviceIP][device[4]].states.blue = (rgbConversion.blue / 100) / 2.55;
+						this.deviceInfo[deviceIP][device[4]].states.green = (rgbConversion.green / 100) / 2.55;
 
-					} else if (device[5]  === `transitionLength`){
+					} else if (device[5] === `transitionLength`) {
 
 						this.deviceInfo[deviceIP][device[4]].states[device[5]] = writeValue;
 
 					} else if (device[5] === 'effect') {
-						
+
 						this.deviceInfo[deviceIP][device[4]].states.effect = writeValue;
-						
+
 					} else if (device[5] === 'state') {
-						
+
 						this.deviceInfo[deviceIP][device[4]].states.state = writeValue;
-						
+
 					}
 
 					const data = {
@@ -1048,22 +1044,22 @@ class Esphome extends utils.Adapter {
 						state: this.deviceInfo[deviceIP][device[4]].states.state,
 						transitionLength: this.deviceInfo[deviceIP][device[4]].states.transitionLength
 					};
-					if(this.deviceInfo[deviceIP][device[4]].config.supportsBrightness === true){
+					if (this.deviceInfo[deviceIP][device[4]].config.supportsBrightness === true) {
 						data.brightness = this.deviceInfo[deviceIP][device[4]].states.brightness;
 					}
-					if(this.deviceInfo[deviceIP][device[4]].config.supportsRgb === true){
+					if (this.deviceInfo[deviceIP][device[4]].config.supportsRgb === true) {
 						data.red = this.deviceInfo[deviceIP][device[4]].states.red;
 						data.green = this.deviceInfo[deviceIP][device[4]].states.green;
 						data.blue = this.deviceInfo[deviceIP][device[4]].states.blue;
 					}
-					if(this.deviceInfo[deviceIP][device[4]].config.supportsWhiteValue === true){
+					if (this.deviceInfo[deviceIP][device[4]].config.supportsWhiteValue === true) {
 						data.white = this.deviceInfo[deviceIP][device[4]].states.white;
 					}
-					if(this.deviceInfo[deviceIP][device[4]].config.supportsColorTemperature === true){
+					if (this.deviceInfo[deviceIP][device[4]].config.supportsColorTemperature === true) {
 						data.colorTemperature = this.deviceInfo[deviceIP][device[4]].states.colorTemperature;
 					}
 					const effect = this.deviceInfo[deviceIP][device[4]].states.effect;
-					if(effect !== '' && effect !== null && effect !== undefined){
+					if (effect !== '' && effect !== null && effect !== undefined) {
 						data.effect = effect;
 					}
 
