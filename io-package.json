@@ -1,8 +1,20 @@
 {
     "common": {
         "name": "esphome",
-        "version": "0.2.4",
+        "version": "0.2.5",
         "news": {
+             "0.2.5": {
+                "en": "local ESPHome removed",
+                "de": "local ESPHome removed",
+                "ru": "local ESPHome removed",
+                "pt": "local ESPHome removed",
+                "nl": "local ESPHome removed",
+                "fr": "local ESPHome removed",
+                "it": "local ESPHome removed",
+                "es": "local ESPHome removed",
+                "pl": "local ESPHome removed",
+                "zh-cn": "local ESPHome removed"
+            },
             "0.2.4": {
                 "en": "Version of ESPHome Dashboard updated to 2021.8\nAdd option if config of ESPHome device should be shown as states (default = FALSE, safes 8 states for each sensor)",
                 "de": "Version des ESPHome Dashboards aktualisiert auf 2021.8\nOption hinzufügen, wenn die Konfiguration des ESPHome-Geräts als Zustände angezeigt werden soll (Standard = FALSE, sichert 8 Zustände für jeden Sensor)",
