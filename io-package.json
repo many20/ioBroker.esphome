@@ -201,7 +201,7 @@
         "messagebox": true,
         "subscribe": "messagebox",
         "extIcon": "https://raw.githubusercontent.com/DrozmotiX/ioBroker.esphome/main/admin/esphome.png",
-        "readme": "https://github.com/DrozmotiX/ioBroker.esphome/blob/main/README.md",
+        "readme": "https://github.com/many20/ioBroker.esphome/blob/main/README.md",
         "loglevel": "info",
         "mode": "daemon",
         "type": "hardware",
